@@ -3,20 +3,21 @@ import { z } from "zod";
 const announcementFields = {
   title: z.string().trim().min(3).max(120),
   description: z.string().trim().min(1).max(5000),
-  price: z.number().finite().nonnegative(),
+  price: z.coerce.number().finite().nonnegative(),
   category: z.string().trim().min(1).max(50),
 };
 
 export const createAnnouncementSchema = z.object(announcementFields);
 
-export const updateAnnouncementSchema = z.object(announcementFields)
+export const updateAnnouncementSchema = z
+  .object(announcementFields)
   .partial()
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be provided",
   });
 
 export const announcementIdSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z.coerce.number().int().positive().max(2147483647),
 });
 
 export const announcementQuerySchema = z.object({

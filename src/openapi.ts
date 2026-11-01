@@ -16,10 +16,12 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
 });
 
 const ErrorSchema = z.object({ message: z.string() });
+
 const TokenPairSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
 });
+
 const UserSchema = z.object({
   id: z.number(),
   username: z.string(),
@@ -27,35 +29,80 @@ const UserSchema = z.object({
   name: z.string(),
   createdAt: z.string().datetime().optional(),
 });
+
 const AuthResponseSchema = z.object({
   user: UserSchema,
   accessToken: z.string(),
   refreshToken: z.string(),
 });
+
 const AnnouncementSchema = z.object({
   id: z.number(),
   title: z.string(),
   description: z.string(),
   price: z.number(),
   category: z.string(),
+  imageUrl: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   user: UserSchema,
 });
+
 const RegisterSchema = z.object({
   username: z.string().min(3),
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(1),
 });
-const LoginSchema = z.object({ username: z.string(), password: z.string() });
-const RefreshSchema = z.object({ refreshToken: z.string() });
-const CreateAnnouncementSchema = z.object({
-  title: z.string().min(3),
-  description: z.string().min(1),
-  price: z.number().nonnegative(),
-  category: z.string().min(1),
+
+const LoginSchema = z.object({
+  username: z.string(),
+  password: z.string(),
 });
+
+const RefreshSchema = z.object({
+  refreshToken: z.string(),
+});
+
+const CreateAnnouncementSchema = z.object({
+  title: z.string().min(3).max(120).openapi({
+    example: "MacBook Pro 2020",
+  }),
+  description: z.string().min(1).max(5000).openapi({
+    example: "Good condition, works perfectly",
+  }),
+  price: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/)
+    .openapi({
+      example: "1500",
+    }),
+  category: z.string().min(1).max(50).openapi({
+    example: "Electronics",
+  }),
+  image: z
+    .string()
+    .openapi({
+      type: "string",
+      format: "binary",
+    })
+    .optional(),
+});
+
+const UpdateAnnouncementSchema = CreateAnnouncementSchema.omit({
+  image: true,
+})
+  .partial()
+  .extend({
+    image: z
+      .string()
+      .openapi({
+        type: "string",
+        format: "binary",
+      })
+      .optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0);
 
 registry.registerPath({
   method: "post",
@@ -77,6 +124,7 @@ registry.registerPath({
     400: { description: "Validation failed" },
   },
 });
+
 registry.registerPath({
   method: "post",
   path: "/auth/login",
@@ -93,6 +141,7 @@ registry.registerPath({
     401: { description: "Invalid credentials" },
   },
 });
+
 registry.registerPath({
   method: "post",
   path: "/auth/refresh",
@@ -109,6 +158,7 @@ registry.registerPath({
     401: { description: "Invalid refresh token" },
   },
 });
+
 registry.registerPath({
   method: "post",
   path: "/auth/logout",
@@ -120,6 +170,7 @@ registry.registerPath({
     401: { description: "Unauthorized" },
   },
 });
+
 registry.registerPath({
   method: "get",
   path: "/auth/me",
@@ -134,6 +185,7 @@ registry.registerPath({
     401: { description: "Unauthorized" },
   },
 });
+
 registry.registerPath({
   method: "get",
   path: "/announcements",
@@ -146,14 +198,19 @@ registry.registerPath({
       sort: z.enum(["newest", "oldest"]).optional(),
     }),
   },
-  responses: { 200: { description: "Paginated announcements" } },
+  responses: {
+    200: { description: "Paginated announcements" },
+  },
 });
+
 registry.registerPath({
   method: "get",
   path: "/announcements/{id}",
   tags: ["Announcements"],
   summary: "Get announcement",
-  request: { params: z.object({ id: z.string() }) },
+  request: {
+    params: z.object({ id: z.string() }),
+  },
   responses: {
     200: {
       description: "Announcement",
@@ -162,6 +219,7 @@ registry.registerPath({
     404: { description: "Announcement not found" },
   },
 });
+
 registry.registerPath({
   method: "post",
   path: "/announcements",
@@ -170,7 +228,12 @@ registry.registerPath({
   security: [{ bearerAuth: [] }],
   request: {
     body: {
-      content: { "application/json": { schema: CreateAnnouncementSchema } },
+      required: true,
+      content: {
+        "multipart/form-data": {
+          schema: CreateAnnouncementSchema,
+        },
+      },
     },
   },
   responses: {
@@ -182,6 +245,7 @@ registry.registerPath({
     401: { description: "Unauthorized" },
   },
 });
+
 registry.registerPath({
   method: "patch",
   path: "/announcements/{id}",
@@ -191,11 +255,10 @@ registry.registerPath({
   request: {
     params: z.object({ id: z.string() }),
     body: {
+      required: true,
       content: {
-        "application/json": {
-          schema: CreateAnnouncementSchema.partial().refine(
-            (v) => Object.keys(v).length > 0,
-          ),
+        "multipart/form-data": {
+          schema: UpdateAnnouncementSchema,
         },
       },
     },
@@ -203,21 +266,23 @@ registry.registerPath({
   responses: {
     200: {
       description: "Updated",
-      content: {
-        "application/json": { schema: AnnouncementSchema },
-      },
+      content: { "application/json": { schema: AnnouncementSchema } },
     },
+    400: { description: "Validation failed" },
     403: { description: "Access denied" },
     404: { description: "Announcement not found" },
   },
 });
+
 registry.registerPath({
   method: "delete",
   path: "/announcements/{id}",
   tags: ["Announcements"],
   summary: "Delete own announcement",
   security: [{ bearerAuth: [] }],
-  request: { params: z.object({ id: z.string() }) },
+  request: {
+    params: z.object({ id: z.string() }),
+  },
   responses: {
     204: { description: "Deleted" },
     403: { description: "Access denied" },
@@ -231,7 +296,7 @@ export function getOpenApiDocument() {
     info: {
       title: "Announcements Board API",
       version: "1.0.0",
-      description: "JSON REST API for an announcements board.",
+      description: "REST API for an announcements board.",
     },
     servers: [{ url: "http://localhost:3000", description: "Local server" }],
   });

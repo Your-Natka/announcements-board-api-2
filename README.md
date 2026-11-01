@@ -1,63 +1,45 @@
 # Announcements Board API
 
-A RESTful API for an announcements board built with **Node.js, Express, TypeScript, PostgreSQL, and Prisma ORM**.
-
-The application provides user authentication, announcement management, input validation, and API documentation through Swagger UI.
-
-## Features
-
-- User registration and login
-- JWT-based authentication
-- Access and refresh token handling
-- Refresh token rotation
-- User profile retrieval
-- Create, read, update, and delete announcements
-- Announcement ownership and access control
-- Request validation using Zod
-- Pagination for announcements
-- PostgreSQL database integration with Prisma ORM
-- Interactive API documentation using Swagger UI
-- TypeScript strict mode
+A RESTful API for an announcements board application with JWT authentication, announcement management, and image uploads.
 
 ## Tech Stack
 
-- **Node.js** — JavaScript runtime
-- **Express** — web application framework
-- **TypeScript** — static typing
-- **PostgreSQL** — relational database
-- **Prisma ORM** — database access and migrations
-- **JWT** — authentication and authorization
-- **Zod** — request validation
-- **Swagger / OpenAPI** — API documentation
+- Node.js
+- Express.js
+- TypeScript
+- PostgreSQL
+- Prisma ORM
+- JWT
+- Cloudinary
+- Multer
+- Pino
+- Helmet
+- CORS
+- express-rate-limit
+- Swagger / OpenAPI
+- Vitest
 
-## Project Structure
+## Features
 
-```text
-announcements-board-api/
-├── prisma/
-│   └── schema.prisma
-├── src/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── routes/
-│   ├── services/
-│   ├── schemas/
-│   └── openapi.ts
-├── app.ts
-├── prisma/
-├── package.json
-├── tsconfig.json
-├── .env.example
-└── README.md
-```
+- User registration and login.
+- JWT access and refresh token authentication.
+- Announcement creation, retrieval, updating, and deletion.
+- Optional image uploads to Cloudinary.
+- Image URLs stored in PostgreSQL through Prisma.
+- Security headers with Helmet.
+- CORS configuration through environment variables.
+- Rate limiting for authentication routes.
+- HTTP and application logging with Pino.
+- API documentation with Swagger UI and OpenAPI.
+- Automated validation tests with Vitest.
 
 ## Getting Started
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Your-Natka/announcements-board-api.git
-cd announcements-board-api
+git clone https://github.com/Your-Natka/announcements-board-api-2.git
+cd announcements-board-api-2
 ```
 
 ### 2. Install dependencies
@@ -68,158 +50,124 @@ npm install
 
 ### 3. Configure environment variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the project root:
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/announcements_board?schema=public"
-JWT_SECRET="your_access_token_secret"
-JWT_REFRESH_SECRET="your_refresh_token_secret"
+
+JWT_SECRET="your_access_secret"
+JWT_REFRESH_SECRET="your_refresh_secret"
+
 PORT=3000
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 ```
 
-Replace the database credentials and JWT secrets with your own values.
+Replace the placeholder values with your own credentials.
+
+**Important:** Never commit your `.env` file or expose secret keys.
 
 ### 4. Set up the database
 
-Make sure PostgreSQL is running and the database exists.
+Run Prisma migrations:
 
-Generate the Prisma Client:
+```bash
+npm run prisma:migrate
+```
+
+Generate Prisma Client:
 
 ```bash
 npm run prisma:generate
 ```
 
-Run database migrations:
-
-```bash
-npm run prisma:migrate -- --name init
-```
-
-### 5. Run the development server
+### 5. Start the development server
 
 ```bash
 npm run dev
 ```
 
-The API will be available at:
+The API will be available at `http://localhost:3000`.
 
-```text
-http://localhost:3000
-```
+## Available Scripts
+
+| Command                   | Description                                        |
+| ------------------------- | -------------------------------------------------- |
+| `npm run dev`             | Start the development server with automatic reload |
+| `npm run build`           | Compile TypeScript                                 |
+| `npm start`               | Start the compiled application                     |
+| `npm run typecheck`       | Check TypeScript types without emitting files      |
+| `npm run prisma:generate` | Generate Prisma Client                             |
+| `npm run prisma:migrate`  | Run database migrations                            |
+| `npm run prisma:studio`   | Open Prisma Studio                                 |
+| `npm test -- --run`       | Run tests once with Vitest                         |
 
 ## API Documentation
 
-Interactive Swagger documentation is available at:
+Swagger UI: `http://localhost:3000/api-docs`
 
-```text
-http://localhost:3000/api-docs
-```
+OpenAPI specification: `http://localhost:3000/openapi.json`
 
-Swagger UI allows you to explore endpoints, provide request data, authorize requests, and execute API operations.
-
-## API Endpoints
+## Main API Routes
 
 ### Authentication
 
-| Method | Endpoint         | Description                        |
-| ------ | ---------------- | ---------------------------------- |
-| POST   | `/auth/register` | Register a new user                |
-| POST   | `/auth/login`    | Log in and receive tokens          |
-| POST   | `/auth/refresh`  | Refresh authentication tokens      |
-| POST   | `/auth/logout`   | Log out and revoke refresh tokens  |
-| GET    | `/auth/me`       | Get the current authenticated user |
+| Method | Endpoint         | Description                   |
+| ------ | ---------------- | ----------------------------- |
+| POST   | `/auth/register` | Register a new user           |
+| POST   | `/auth/login`    | Log in                        |
+| GET    | `/auth/me`       | Get the current user          |
+| POST   | `/auth/refresh`  | Refresh authentication tokens |
+| POST   | `/auth/logout`   | Log out                       |
 
 ### Announcements
 
-| Method | Endpoint             | Description                       |
-| ------ | -------------------- | --------------------------------- |
-| POST   | `/announcements`     | Create an announcement            |
-| GET    | `/announcements`     | Get announcements with pagination |
-| GET    | `/announcements/:id` | Get an announcement by ID         |
-| PATCH  | `/announcements/:id` | Update an announcement            |
-| DELETE | `/announcements/:id` | Delete an announcement            |
+| Method | Endpoint             | Description            |
+| ------ | -------------------- | ---------------------- |
+| GET    | `/announcements`     | Get announcements      |
+| GET    | `/announcements/:id` | Get an announcement    |
+| POST   | `/announcements`     | Create an announcement |
+| PATCH  | `/announcements/:id` | Update an announcement |
+| DELETE | `/announcements/:id` | Delete an announcement |
 
-Protected endpoints require a valid JWT access token in the Authorization header:
+Protected routes require a valid access token.
 
-```text
-Authorization: Bearer YOUR_ACCESS_TOKEN
+## Image Uploads
+
+Announcement images are uploaded using `multipart/form-data`.
+
+Use the field name `image` when uploading a file.
+
+Image uploads are optional. When an image is provided, it is uploaded to Cloudinary and its secure URL is saved in the announcement's `imageUrl` field.
+
+## Running Tests
+
+```bash
+npm test -- --run
 ```
 
-## Validation and Error Handling
+## TypeScript Check
 
-The API validates incoming request data using Zod.
-
-Examples of validation rules:
-
-- Announcement title must contain at least 3 characters.
-- Price must be greater than or equal to 0.
-- Required fields cannot be omitted.
-- Invalid request data returns `400 Bad Request`.
-
-### HTTP Status Codes
-
-| Status | Description                    |
-| ------ | ------------------------------ |
-| 200    | Request completed successfully |
-| 201    | Resource created successfully  |
-| 204    | Resource deleted successfully  |
-| 400    | Validation error               |
-| 401    | Unauthorized                   |
-| 403    | Access denied                  |
-| 404    | Resource not found             |
-| 500    | Internal server error          |
-
-## Authorization and Security
-
-- Passwords are not included in public user responses.
-- Protected routes require JWT authentication.
-- Users can modify or delete only their own announcements.
-- Unauthorized requests are rejected.
-- Refresh tokens are stored and managed by the application.
-
-## Pagination
-
-The announcements endpoint supports pagination.
-
-Example:
-
-```text
-GET /announcements?page=1&perPage=10
+```bash
+npm run typecheck
 ```
 
-The response includes announcement data and pagination metadata:
+## Environment Variables
 
-```json
-{
-  "data": [],
-  "pagination": {
-    "total": 0,
-    "page": 1,
-    "totalPages": 0,
-    "perPage": 10
-  }
-}
-```
+| Variable                | Description                             |
+| ----------------------- | --------------------------------------- |
+| `DATABASE_URL`          | PostgreSQL connection string            |
+| `JWT_SECRET`            | Secret used to sign access tokens       |
+| `JWT_REFRESH_SECRET`    | Secret used to sign refresh tokens      |
+| `PORT`                  | Server port                             |
+| `ALLOWED_ORIGINS`       | Comma-separated list of allowed origins |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name                   |
+| `CLOUDINARY_API_KEY`    | Cloudinary API key                      |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret                   |
 
-## Testing
+## Project Purpose
 
-The API was manually tested using Swagger UI.
-
-The following scenarios were verified:
-
-- User registration and login
-- Retrieving the authenticated user
-- Creating announcements
-- Retrieving announcements
-- Updating announcements
-- Deleting announcements
-- Validation of empty titles
-- Validation of negative prices
-- Validation of missing required fields
-- Unauthorized access without a token
-- Access control for announcements belonging to another user
-- Correct HTTP status codes for successful and unsuccessful requests
-
-## License
-
-This project was created for educational purposes as part of a Node.js / TypeScript assignment.
+This project was developed as part of a Node.js backend assignment. It demonstrates REST API development, authentication, database management, cloud image uploads, security middleware, logging, API documentation, and automated testing.

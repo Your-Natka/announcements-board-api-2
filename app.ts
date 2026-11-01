@@ -5,14 +5,33 @@ import swaggerUi from "swagger-ui-express";
 import authRoutes from "./src/routes/auth.routes";
 import announcementRoutes from "./src/routes/announcements.routes";
 import { getOpenApiDocument } from "./src/openapi";
+import helmet from "helmet";
+import pinoHttp from "pino-http";
+import { logger } from "./src/logger";
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(helmet());
+
+app.use(pinoHttp({ logger }));
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+  }),
+);
+
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (_req: Request, res: Response) => {
-  res.status(200).json({ message: "Announcements Board API", docs: "/api-docs" });
+  res
+    .status(200)
+    .json({ message: "Announcements Board API", docs: "/api-docs" });
 });
 
 app.use("/auth", authRoutes);
@@ -42,7 +61,9 @@ app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
 
 const port = Number(process.env.PORT || 3000);
 if (require.main === module) {
-  app.listen(port, () => console.log(`API listening on http://localhost:${port}`));
+  app.listen(port, () =>
+    console.log(`API listening on http://localhost:${port}`),
+  );
 }
 
 export default app;
